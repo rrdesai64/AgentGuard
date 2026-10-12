@@ -46,7 +46,7 @@ class OSSandboxGuardian:
                 stderr=subprocess.PIPE,
                 text=True
             )
-            stdout, stderr = proc.communicate(timeout=self.policy.get("max_execution_timeout_sec", 10))
+            stdout, stderr = proc.communicate(timeout=2.0)
             returncode = proc.returncode
         except subprocess.TimeoutExpired:
             if proc:

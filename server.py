@@ -69,6 +69,41 @@ async def serve_dashboard():
         <header class="flex justify-between items-center border-b border-slate-800 pb-4 mb-6">
             <div>
                 <h1 class="text-2xl font-bold text-emerald-400 tracking-tight font-mono">AGENTGUARD // DUAL-RING RUNTIME FIREWALL</h1>
+
+    <!-- V2.0 LIVE CAUSAL PROVENANCE DAG VISUALIZER -->
+    <div id="causal-dag-container" style="max-width:1200px;margin:16px auto 24px auto;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:18px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span style="color:#38bdf8;font-weight:700;font-size:14px;letter-spacing:0.5px;">
+          LIVE CAUSAL TAINT PROVENANCE GRAPH (DAG) &mdash; 512-D FFT HRR RING 1 + KERNEL RING 2
+        </span>
+        <span id="dag-status-badge" style="background:#065f46;color:#34d399;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;">
+          STATE: VERIFIED CLEAN
+        </span>
+      </div>
+      <svg id="causal-dag-svg" width="100%" height="110" viewBox="0 0 980 110" style="background:#0f172a;border-radius:8px;border:1px solid #1e293b;">
+        <defs>
+          <marker id="arrow-ok" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" />
+          </marker>
+          <marker id="arrow-block" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#f43f5e" />
+          </marker>
+        </defs>
+        <rect x="20" y="28" width="190" height="54" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="2"/>
+        <text x="115" y="52" fill="#ecfdf5" font-size="12" font-weight="bold" text-anchor="middle">1. AUTHENTICATED USER</text>
+        <text x="115" y="70" fill="#6ee7b7" font-size="10" text-anchor="middle">Role-Filler HRR Anchor</text>
+        <line x1="210" y1="55" x2="290" y2="55" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrow-ok)"/>
+        <rect id="dag-node-taint" x="295" y="28" width="215" height="54" rx="8" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+        <text x="402" y="52" fill="#f8fafc" font-size="12" font-weight="bold" text-anchor="middle">2. CONTEXT INGESTION</text>
+        <text id="dag-text-taint" x="402" y="70" fill="#94a3b8" font-size="10" text-anchor="middle">Session Context Status</text>
+        <line id="dag-edge-action" x1="510" y1="55" x2="600" y2="55" stroke="#64748b" stroke-width="2.5" stroke-dasharray="5,5" marker-end="url(#arrow-ok)"/>
+        <rect id="dag-node-gate" x="605" y="20" width="350" height="70" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+        <text id="dag-gate-title" x="780" y="45" fill="#38bdf8" font-size="12" font-weight="bold" text-anchor="middle">3. DUAL-RING ENFORCEMENT GATE</text>
+        <text id="dag-gate-sub" x="780" y="64" fill="#94a3b8" font-size="11" text-anchor="middle">Awaiting live interception...</text>
+        <text id="dag-gate-lat" x="780" y="80" fill="#64748b" font-size="10" text-anchor="middle">HRR FFT Dim=512 | Kernel Syscall Guard</text>
+      </svg>
+    </div>
+
                 <p class="text-sm text-slate-400">Layer 7 Semantic MCP Interceptor + Layer 3/4 Linux Kernel Syscall Guardian</p>
             </div>
             <span class="px-3 py-1 bg-emerald-950 text-emerald-400 border border-emerald-700 rounded text-xs font-mono">
@@ -147,6 +182,62 @@ async def serve_dashboard():
     </div>
 
     <script>
+
+      // Auto-hook fetch() so every Ring 1 / Ring 2 API call updates the Live Causal DAG automatically
+      const _origFetch = window.fetch;
+      window.fetch = async function(...args) {
+        const resp = await _origFetch.apply(this, args);
+        try {
+          const clone = resp.clone();
+          const data = await clone.json();
+          if (data && data.status) {
+            const taintRect = document.getElementById('dag-node-taint');
+            const taintText = document.getElementById('dag-text-taint');
+            const edge = document.getElementById('dag-edge-action');
+            const gateRect = document.getElementById('dag-node-gate');
+            const gateTitle = document.getElementById('dag-gate-title');
+            const gateSub = document.getElementById('dag-gate-sub');
+            const gateLat = document.getElementById('dag-gate-lat');
+            const badge = document.getElementById('dag-status-badge');
+            const drift = (data.metadata && data.metadata.drift_score !== undefined) ? data.metadata.drift_score : 'N/A';
+
+            if ((data.reason && data.reason.includes('TAINTED')) || (data.metadata && data.metadata.taint_lineage && data.metadata.taint_lineage.length > 0)) {
+              taintRect.setAttribute('fill', '#451a03');
+              taintRect.setAttribute('stroke', '#f59e0b');
+              taintText.textContent = 'TAINTED: Untrusted External Input';
+              taintText.setAttribute('fill', '#fcd34d');
+            }
+            if (data.status === 'BLOCKED') {
+              edge.setAttribute('stroke', '#f43f5e');
+              edge.setAttribute('marker-end', 'url(#arrow-block)');
+              gateRect.setAttribute('fill', '#4c0519');
+              gateRect.setAttribute('stroke', '#f43f5e');
+              gateTitle.setAttribute('fill', '#fda4af');
+              gateTitle.textContent = 'BLOCKED AT ' + (data.ring || 'ENFORCEMENT GATE');
+              gateSub.setAttribute('fill', '#fecdd3');
+              gateSub.textContent = (data.reason || '').slice(0, 52) + '...';
+              gateLat.setAttribute('fill', '#fb7185');
+              gateLat.textContent = 'Latency: ' + data.latency_ms + ' ms | HRR Drift: ' + drift;
+              badge.style.background = '#7f1d1d';
+              badge.style.color = '#fca5a5';
+              badge.textContent = 'INTRUSION NEUTRALIZED (' + data.latency_ms + ' ms)';
+            } else if (data.status === 'ALLOWED') {
+              edge.setAttribute('stroke', '#10b981');
+              gateRect.setAttribute('fill', '#064e3b');
+              gateRect.setAttribute('stroke', '#10b981');
+              gateTitle.setAttribute('fill', '#6ee7b7');
+              gateTitle.textContent = 'ALLOWED AT ' + (data.ring || 'ENFORCEMENT GATE');
+              gateSub.textContent = (data.reason || '').slice(0, 52);
+              gateLat.textContent = 'Latency: ' + data.latency_ms + ' ms | HRR Drift: ' + drift;
+              badge.style.background = '#065f46';
+              badge.style.color = '#34d399';
+              badge.textContent = 'VERIFIED SAFE (' + data.latency_ms + ' ms)';
+            }
+          }
+        } catch (e) {}
+        return resp;
+      };
+
         function loadRing1Preset(type) {
             if (type === 'safe') {
                 document.getElementById('r1_tainted').checked = false;
