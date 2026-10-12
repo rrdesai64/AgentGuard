@@ -1,0 +1,34 @@
+version: "1.0"
+policies:
+  ring1_mcp:
+    # High-privilege actions forbidden if session context is TAINTED by external ingest
+    tainted_forbidden_tools:
+      - "execute_sql_query"
+      - "export_database_records"
+      - "send_outbound_email"
+      - "dispatch_slack_message"
+    
+    # Maximum allowed cosine distance between initial prompt and proposed tool call
+    max_semantic_drift_threshold: 0.55
+    
+    # High-risk parameter regex patterns (catches secret queries, dumps, exfil)
+    suspicious_argument_patterns:
+      - "(?i)(SELECT\\s+.*FROM\\s+credentials|users|salaries)"
+      - "(?i)(dump|exfiltrate|leak|token|id_rsa|private_key)"
+      - "(?i)(https?://(?!localhost|127\\.0\\.0\\.1).*)"
+
+  ring2_os:
+    # Restricted file paths for coding/devops agent executions
+    blocked_read_paths:
+      - "/etc/shadow"
+      - "/etc/passwd"
+      - ".ssh/id_rsa"
+      - ".ssh/id_ed25519"
+      - ".aws/credentials"
+      - ".env"
+    
+    # Execution isolation parameters
+    enforce_network_isolation: true
+    max_execution_timeout_sec: 10
+    forbidden_syscall_triggers:
+      - "connect"       # In strict local test runs, forbid outbound network sockets
