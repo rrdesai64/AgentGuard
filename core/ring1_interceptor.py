@@ -1,3 +1,4 @@
+import zlib
 import time
 import re
 import yaml
@@ -28,9 +29,13 @@ class SemanticMCPInterceptor:
             # Split on underscores and non-alphanumerics so snake_case tool names align with natural language
             clean_text = text.lower().replace("_", " ")
             tokens = re.findall(r"[a-z0-9]+", clean_text)
+            synonym_map = {"summarize": "read", "summary": "read", "fetch": "read", "get": "read", "details": "ticket", "onboarding": "ticket", "id": "ticket"}
+            stopwords = {"please", "the", "for", "and", "with", "from", "into"}
             for t in tokens:
-                # Project word stems and character 3-grams for semantic resilience
-                idx = hash(t[:4]) % dim
+                if t in stopwords:
+                    continue
+                canonical = synonym_map.get(t, t[:5])
+                idx = zlib.crc32(canonical.encode("utf-8")) % dim
                 vec[idx] += 1.0
             norm = np.linalg.norm(vec)
             return vec / (norm + 1e-7)
