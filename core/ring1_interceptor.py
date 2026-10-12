@@ -25,9 +25,12 @@ class SemanticMCPInterceptor:
         """
         def hash_vectorizer(text: str, dim: int = 128) -> np.ndarray:
             vec = np.zeros(dim, dtype=np.float32)
-            tokens = re.findall(r"\w+", text.lower())
+            # Split on underscores and non-alphanumerics so snake_case tool names align with natural language
+            clean_text = text.lower().replace("_", " ")
+            tokens = re.findall(r"[a-z0-9]+", clean_text)
             for t in tokens:
-                idx = hash(t) % dim
+                # Project word stems and character 3-grams for semantic resilience
+                idx = hash(t[:4]) % dim
                 vec[idx] += 1.0
             norm = np.linalg.norm(vec)
             return vec / (norm + 1e-7)
