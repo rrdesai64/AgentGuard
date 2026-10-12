@@ -190,7 +190,9 @@ async def serve_dashboard():
         try {
           const clone = resp.clone();
           const data = await clone.json();
-          if (data && data.status) {
+          const d = (data && data.decision) ? data.decision : data;
+          if (d && d.status) {
+            const data = d;
             const taintRect = document.getElementById('dag-node-taint');
             const taintText = document.getElementById('dag-text-taint');
             const edge = document.getElementById('dag-edge-action');
