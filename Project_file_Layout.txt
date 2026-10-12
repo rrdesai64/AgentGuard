@@ -1,0 +1,11 @@
+agentguard/
+├── config/
+│   └── security_policy.yaml
+├── core/
+│   ├── __init__.py
+│   ├── schemas.py
+│   ├── taint_graph.py
+│   ├── ring1_interceptor.py
+│   └── ring2_guardian.py
+├── requirements.txt
+└── demo_runner.py

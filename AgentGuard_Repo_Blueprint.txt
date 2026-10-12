@@ -1,0 +1,15 @@
+agentguard/
+├── config/
+│   └── security_policy.yaml       # Unified Ring 1 (MCP) & Ring 2 (OS Syscall) policies
+├── core/
+│   ├── taint_graph.py             # Causal lineage & provenance state tracker
+│   ├── ring1_mcp_interceptor.py   # Layer 7 JSON-RPC / Tool-call proxy & intent scorer
+│   └── ring2_os_guardian.py       # Layer 3/4 Linux syscall / namespace / egress enforcer
+├── targets/
+│   ├── enterprise_mcp_agent.py    # Victim 1: Inbox + SQL + Slack agent
+│   └── devops_coding_agent.py     # Victim 2: Bash + Pytest + Git coding agent
+├── payloads/
+│   ├── ring1_poisoned_email.json  # Indirect prompt injection payloads
+│   └── ring2_trojan_pytest.py     # Malicious test suite attempting credential exfil
+├── server.py                      # FastAPI backend + WebSocket telemetry streamer
+└── ui/                            # Next.js + Tailwind + React Flow Live Dashboard

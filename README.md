@@ -4,6 +4,8 @@
 [![Ring 1 Latency](https://img.shields.io/badge/Ring_1_Latency-%3C2.5ms-success.svg)]()
 [![Ring 2 Sandbox](https://img.shields.io/badge/Ring_2_Isolation-unshare_%2B_strace-informational.svg)]()
 
+![AgentGuard Live Console](docs/console_preview.png)
+
 **AgentGuard** is an inline, low-latency runtime security firewall designed to protect autonomous AI agents (MCP tool-calling systems and DevOps/coding agents) from **Indirect Prompt Injection**, **Semantic Intent Drift**, and **Subprocess Kernel Breakouts**.
 
 Rather than relying on probabilistic "LLM-as-a-Judge" text wrappersâ€”which introduce 600ms+ of latency, double token expenditure, and remain susceptible to adversarial prompt encodingsâ€”AgentGuard treats the language model as an **untrusted user-space process**. It enforces deterministic security invariants across two architectural rings:
