@@ -1,3 +1,4 @@
+from core.vsa_engine import HolographicIntentEngine
 import zlib
 import time
 import re
@@ -13,6 +14,7 @@ class SemanticMCPInterceptor:
         with open(policy_path, "r") as f:
             self.policy = yaml.safe_load(f)["policies"]["ring1_mcp"]
         self.sessions: Dict[str, SessionTaintGraph] = {}
+        self.vsa_engine = HolographicIntentEngine(dim=512)
 
     def get_or_create_session(self, session_id: str) -> SessionTaintGraph:
         if session_id not in self.sessions:
@@ -20,33 +22,8 @@ class SemanticMCPInterceptor:
         return self.sessions[session_id]
 
     def _compute_semantic_drift(self, prompt: str, tool_name: str, args: Dict[str, Any]) -> float:
-        """
-        Fast sub-millisecond intent distance calculation using character-n-gram hashing vectors.
-        (Can be swapped with an ONNX/SentenceTransformer embedding runtime without changing the signature).
-        """
-        def hash_vectorizer(text: str, dim: int = 128) -> np.ndarray:
-            vec = np.zeros(dim, dtype=np.float32)
-            # Split on underscores and non-alphanumerics so snake_case tool names align with natural language
-            clean_text = text.lower().replace("_", " ")
-            tokens = re.findall(r"[a-z0-9]+", clean_text)
-            synonym_map = {"summarize": "read", "summary": "read", "fetch": "read", "get": "read", "details": "ticket", "onboarding": "ticket", "id": "ticket"}
-            stopwords = {"please", "the", "for", "and", "with", "from", "into"}
-            for t in tokens:
-                if t in stopwords:
-                    continue
-                canonical = synonym_map.get(t, t[:5])
-                idx = zlib.crc32(canonical.encode("utf-8")) % dim
-                vec[idx] += 1.0
-            norm = np.linalg.norm(vec)
-            return vec / (norm + 1e-7)
+        return self.vsa_engine.compute_hrr_drift(prompt, tool_name, args)
 
-        v1 = hash_vectorizer(prompt)
-        payload_str = f"{tool_name} " + " ".join(f"{k}:{v}" for k, v in args.items())
-        v2 = hash_vectorizer(payload_str)
-        
-        # Cosine distance: 1 - cosine_similarity
-        similarity = float(np.dot(v1, v2))
-        return round(1.0 - max(0.0, similarity), 3)
 
     def evaluate(self, request: ToolCallRequest) -> InterceptDecision:
         start_time = time.perf_counter()
