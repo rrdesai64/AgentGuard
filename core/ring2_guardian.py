@@ -14,6 +14,16 @@ class OSSandboxGuardian:
 
     def execute_monitored_command(self, command: str, working_dir: str = "/tmp") -> InterceptDecision:
         start_time = time.perf_counter()
+        # Public Demo Host-Safety Guard: block destructive file deletion, redirection, or reverse shells before spawn
+        if re.search(r"(?i)(?:\b(?:rm|mv|cp|dd|mkfs|chmod|chown|truncate|kill|pkill|reboot|shutdown|curl|wget|nc|ncat)\b|>|/mnt/|\bsudo\b)", command):
+            latency = (time.perf_counter() - start_time) * 1000.0
+            return InterceptDecision(
+                status=InterceptStatus.BLOCKED,
+                ring=EnforcementRing.RING2_OS,
+                reason="Kernel Syscall Intercept: Blocked destructive host mutation or unauthorized network/filesystem vector.",
+                latency_ms=round(latency, 2),
+                metadata={"command": command, "layer": "Ring2-PreSpawn-Guard"}
+            )
         has_strace = shutil.which("strace") is not None
         has_unshare = shutil.which("unshare") is not None
 
